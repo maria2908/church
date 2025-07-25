@@ -47,7 +47,6 @@ h1 {
         justify-content: space-between;
 
         .logo {
-            margin: 0 auto;
 
             img {
                 width: 80px;
@@ -162,7 +161,7 @@ h1 {
         text-align: center;
 
         h1 {
-            font-size: 50px;
+            font-size: 90px;
         }
 
         .main_button {
@@ -230,6 +229,10 @@ h1 {
         padding: 0 40px;
         flex: 1 1 350px;
         max-width: 600px;
+
+        h2 {
+            margin-top: 0;
+        }
         .links {
             display: flex;
             align-items: center;
@@ -237,7 +240,6 @@ h1 {
             flex-wrap: wrap;
             margin-bottom: 30px;
 
-            
             a {
                 display: flex;
                 align-items: center;
@@ -249,8 +251,10 @@ h1 {
                     width: 30px ;
                 }
             }
+        }
 
-
+        .calendar {
+            flex-wrap: unset;
         }
 
         .button {
@@ -276,14 +280,9 @@ h1 {
 
 }
 
-.calendar {
-    background-color: var(--gold-transparent);
-    border-radius: 2em 2em 0 0 ;
-    padding-bottom: 30px;
-}
 
 .footer {
-    background-color: var(--gold-transparent);
+    background-color: white;
     
     footer {
         background-color: var(--blue-primary);
@@ -298,6 +297,7 @@ h1 {
 
         img {
             width: 40px;
+            margin-right: 10px;
         }
     }
 }
@@ -311,6 +311,13 @@ h1 {
     }
 
     .main {
+        header {
+            .main-nav {
+                .logo img{
+                    width: 50px !important;
+                }
+            }
+        }
         .main_content {
             h1 {
                 font-size: 35px;

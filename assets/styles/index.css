@@ -45,9 +45,6 @@ h1 {
   justify-content: space-between;
   /* nav toggle */
 }
-.main .main-nav .logo {
-  margin: 0 auto;
-}
 .main .main-nav .logo img {
   width: 80px;
 }
@@ -139,7 +136,7 @@ h1 {
   text-align: center;
 }
 .main .main_content h1 {
-  font-size: 50px;
+  font-size: 90px;
 }
 .main .main_content .main_button {
   all: unset;
@@ -199,6 +196,9 @@ h1 {
   flex: 1 1 350px;
   max-width: 600px;
 }
+.service_information .service_content h2 {
+  margin-top: 0;
+}
 .service_information .service_content .links {
   display: flex;
   align-items: center;
@@ -215,6 +215,9 @@ h1 {
 .service_information .service_content .links a svg {
   margin-left: 10px;
   width: 30px;
+}
+.service_information .service_content .calendar {
+  flex-wrap: unset;
 }
 .service_information .service_content .button {
   display: inline-block;
@@ -234,14 +237,8 @@ h1 {
   border: 0;
 }
 
-.calendar {
-  background-color: var(--gold-transparent);
-  border-radius: 2em 2em 0 0;
-  padding-bottom: 30px;
-}
-
 .footer {
-  background-color: var(--gold-transparent);
+  background-color: white;
 }
 .footer footer {
   background-color: var(--blue-primary);
@@ -256,11 +253,15 @@ h1 {
 }
 .footer footer img {
   width: 40px;
+  margin-right: 10px;
 }
 
 @media screen and (max-width: 1000px) {
   .quote .otro-blockquote {
     font-size: 17px;
+  }
+  .main header .main-nav .logo img {
+    width: 50px !important;
   }
   .main .main_content h1 {
     font-size: 35px;
