@@ -149,6 +149,9 @@
                 <small class="muted">${new Date(p.published_at).toLocaleString()}</small>
             </article>
             `).join('');
+
+            // ссылка «все посты»
+            addViewAllLink(postsSection, 'posts.html', 'Показать все посты →');
         }
 
         // Галерея: последние 6 (сортировка по имени ↓, т.к. мы кладём файлы как Date.now()_name)
@@ -162,6 +165,7 @@
 
             const publicUrl = name => supabase.storage.from(BUCKET).getPublicUrl('photos/' + name).data.publicUrl;
             galleryEl.innerHTML = files.map(f => `<img class="thumb" src="${publicUrl(f.name)}" alt="">`).join('');
+            addViewAllLink(gallerySection, 'gallery.html', 'Показать всю галерею →');
         }
 
         loadPosts();
