@@ -4,6 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Кабинет администратора</title>
+  <style>/* Скрываем всё до проверки */ body{display:none}</style>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    const SUPABASE_URL  = 'https://YOUR-PROJECT.supabase.co';
+    const SUPABASE_ANON = 'YOUR-ANON-KEY';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // Быстрая проверка: если НЕТ сессии — сразу на логин
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { location.replace('/admin.html'); }
+
+    // Если сессия есть — проверяем, что это админ
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: adminRec } = await supabase.from('admins').select('user_id').eq('user_id', user.id).maybeSingle();
+    if (!adminRec) { await supabase.auth.signOut(); location.replace('/admin.html'); }
+
+    // Если всё ок — показываем страницу (дальше основной код на этой же странице)
+    document.addEventListener('DOMContentLoaded', ()=>{ document.body.style.display=''; });
+  </script>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 2rem auto; }
     form, .card { border:1px solid #ddd; padding:1rem; border-radius:.5rem; margin:1rem 0; }
@@ -25,10 +44,8 @@
         <input id="postId" type="hidden">
         <input id="title" placeholder="Заголовок" required>
         <textarea id="body" placeholder="Текст" rows="6" required></textarea>
-
         <label>Обложка (необязательно): <input type="file" id="cover" accept="image/*"></label>
         <label><input type="checkbox" id="clearCover"> Удалить текущую обложку</label>
-
         <button>Сохранить</button>
         <button type="button" id="resetBtn">Очистить</button>
         <p id="postMsg"></p>
@@ -57,32 +74,19 @@
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    const SUPABASE_URL  = 'https://xsxorgfkhmeinjrosprt.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzeG9yZ2ZraG1laW5qcm9zcHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkxMjgsImV4cCI6MjA3MDc0NTEyOH0.ojkysEKiLi5xttq7WyfEnt3xjF4PhIVG1tdxrimjTi8';
-    const BUCKET = 'media'; // имя бакета в Storage: media/covers и media/photos
+    const SUPABASE_URL  = 'https://YOUR-PROJECT.supabase.co';
+    const SUPABASE_ANON = 'YOUR-ANON-KEY';
+    const BUCKET = 'media';
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    async function isAdmin(userId){
-      const { data } = await supabase.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
-      return !!data;
-    }
-
-    // Guard: только админ
-    (async ()=>{
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !(await isAdmin(user.id))) { location.href = '/admin.html'; return; }
-      await loadPosts(); await loadGallery();
-    })();
-
-    // Кнопка "Выйти"
+    // Выйти
     document.getElementById('logoutBtn').onclick = async () => {
       await supabase.auth.signOut();
-      location.href = '/admin.html';
+      location.replace('/admin.html');
     };
 
     // ===== Helpers =====
     function pathFromPublicUrl(url){
-      // https://<proj>.supabase.co/storage/v1/object/public/<BUCKET>/<path>
       const marker = `/object/public/${BUCKET}/`;
       const i = url.indexOf(marker);
       return i === -1 ? null : url.slice(i + marker.length);
@@ -90,20 +94,16 @@
 
     // ===== POSTS =====
     async function loadPosts(){
-      const { data: posts, error } = await supabase.from('posts')
-        .select('*').order('published_at', { ascending:false });
+      const { data: posts, error } = await supabase.from('posts').select('*').order('published_at',{ascending:false});
       if (error) { alert(error.message); return; }
       const tbody = document.getElementById('postsTable');
       tbody.innerHTML = (posts||[]).map(p => `
         <tr>
-          <td>${p.id}</td>
-          <td>${p.title}</td>
+          <td>${p.id}</td><td>${p.title}</td>
           <td>${p.cover_url ? `<img src="${p.cover_url}" alt="">` : '—'}</td>
           <td>${new Date(p.published_at).toLocaleString()}</td>
-          <td>
-            <button data-edit="${p.id}">Редактировать</button>
-            <button data-del="${p.id}">Удалить</button>
-          </td>
+          <td><button data-edit="${p.id}">Редактировать</button>
+              <button data-del="${p.id}">Удалить</button></td>
         </tr>`).join('');
       tbody.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => fillForm(+b.dataset.edit, posts));
       tbody.querySelectorAll('[data-del]').forEach(b => b.onclick = () => deletePost(+b.dataset.del));
@@ -112,32 +112,24 @@
     function fillForm(id, posts){
       const p = posts.find(x => x.id === id);
       postId.value = p.id; title.value = p.title; body.value = p.body;
-      clearCover.checked = false;
-      postMsg.textContent = 'Редактирование #' + p.id;
+      clearCover.checked = false; postMsg.textContent = 'Редактирование #' + p.id;
       window.scrollTo({top:0, behavior:'smooth'});
     }
-
     resetBtn.onclick = () => { postForm.reset(); postId.value=''; postMsg.textContent=''; };
 
     postForm.onsubmit = async (e) => {
       e.preventDefault();
-      const id = postId.value;
-      const titleVal = title.value.trim();
-      const bodyVal  = body.value.trim();
+      const id = postId.value, t = title.value.trim(), b = body.value.trim();
       const clear = clearCover.checked;
+      let newCoverUrl = null, oldCoverPath = null;
 
-      let newCoverUrl = null;
-      let oldCoverPath = null;
-
-      // если выбрали новую обложку — загружаем в Storage
       const file = cover.files[0];
       if (file) {
         const path = `covers/${Date.now()}_${file.name}`;
         const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file);
         if (upErr) { postMsg.textContent = upErr.message; return; }
         newCoverUrl = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
-
-        if (id) { // готовим удаление старой
+        if (id) {
           const { data: old } = await supabase.from('posts').select('cover_url').eq('id', id).maybeSingle();
           if (old?.cover_url) oldCoverPath = pathFromPublicUrl(old.cover_url);
         }
@@ -146,7 +138,7 @@
         if (old?.cover_url) oldCoverPath = pathFromPublicUrl(old.cover_url);
       }
 
-      const payload = { title: titleVal, body: bodyVal };
+      const payload = { title: t, body: b };
       if (file) payload.cover_url = newCoverUrl;
       if (clear && !file) payload.cover_url = null;
 
@@ -154,9 +146,7 @@
       if (id) ({ error } = await supabase.from('posts').update(payload).eq('id', id));
       else     ({ error } = await supabase.from('posts').insert(payload));
 
-      if (!error && oldCoverPath) {
-        await supabase.storage.from(BUCKET).remove([oldCoverPath]); // не критично, если не удалится
-      }
+      if (!error && oldCoverPath) await supabase.storage.from(BUCKET).remove([oldCoverPath]);
 
       postMsg.textContent = error ? error.message : 'Сохранено!';
       if (!error) { postForm.reset(); postId.value=''; await loadPosts(); }
@@ -176,9 +166,9 @@
     // ===== GALLERY =====
     async function loadGallery(){
       const { data: files, error } = await supabase.storage.from(BUCKET)
-        .list('photos', { limit:200, sortBy:{ column:'name', order:'desc' } });
+        .list('photos', { limit:200, sortBy:{column:'name',order:'desc'} });
       if (error) { console.warn(error); return; }
-      const url = (name) => supabase.storage.from(BUCKET).getPublicUrl('photos/'+name).data.publicUrl;
+      const url = name => supabase.storage.from(BUCKET).getPublicUrl('photos/'+name).data.publicUrl;
       const el = document.getElementById('gallery');
       el.innerHTML = (files||[]).map(f => `
         <div style="display:inline-block;margin:6px;text-align:center">
@@ -192,14 +182,8 @@
       });
     }
 
-    photoForm.onsubmit = async (e) => {
-      e.preventDefault();
-      const f = photo.files[0]; if (!f) return;
-      const path = `photos/${Date.now()}_${f.name}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(path, f);
-      photoMsg.textContent = error ? error.message : 'Загружено!';
-      if (!error) { photoForm.reset(); loadGallery(); }
-    };
+    // старт загрузок
+    await loadPosts(); await loadGallery();
   </script>
 </body>
 </html>

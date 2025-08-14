@@ -10,7 +10,15 @@
 
     <link rel="stylesheet" type="text/css" href="./assets/styles/index.css"/>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 2rem auto; }
+    .posts { display: grid; gap: 1rem; }
+    .post  { border:1px solid #eee; border-radius:.5rem; padding:1rem; }
+    .cover { max-width: 360px; height:auto; display:block; margin:.5rem 0; }
+    .grid  { display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:10px; }
+    .thumb { width:100%; height:auto; display:block; border-radius:.4rem; }
+    .muted { color:#777; }
+  </style>
     <title>Парафія Всіх Святих</title>
 
     <style>
@@ -94,12 +102,12 @@
 
     <section>
         <h2>Посты</h2>
-        <div id="posts" class="posts"></div>
+        <div id="posts" class="posts"><p class="muted">Загружаем…</p></div>
     </section>
 
     <section>
         <h2>Галерея</h2>
-        <div id="gallery" class="grid"></div>
+        <div id="gallery" class="grid"><p class="muted">Загружаем…</p></div>
     </section>
 
     <!-- Footer -->
@@ -117,57 +125,61 @@
 
         const SUPABASE_URL  = 'https://YOUR-PROJECT.supabase.co';
         const SUPABASE_ANON = 'YOUR-ANON-KEY';
-        const BUCKET = 'media';
+        const BUCKET = 'media'; // <- имя бакета с фото
 
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+        const postsEl = document.getElementById('posts');
+        const galleryEl = document.getElementById('gallery');
 
-        // простая экранизация, чтобы не сломать разметку
-        const esc = s => (s ?? '').replace(/[&<>"']/g, m =>
-        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
-        );
+        const esc = s => (s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-        // --- посты ---
+        // --- Посты ---
         async function loadPosts() {
         const { data: posts, error } = await supabase
             .from('posts')
             .select('*')
             .order('published_at', { ascending: false });
 
-        if (error) { console.error(error); return; }
-
-        postsEl.innerHTML = (posts || []).map(p => `
+        if (error) {
+            console.error(error);
+            postsEl.innerHTML = `<p class="muted">Не удалось загрузить посты.</p>`;
+            return;
+        }
+        if (!posts?.length) {
+            postsEl.innerHTML = `<p class="muted">Постов пока нет.</p>`;
+            return;
+        }
+        postsEl.innerHTML = posts.map(p => `
             <article class="post">
             ${p.cover_url ? `<img class="cover" src="${p.cover_url}" alt="">` : ''}
             <h3>${esc(p.title)}</h3>
-            <p>${esc(p.body).replace(/\n/g, '<br>')}</p>
-            <small>${new Date(p.published_at).toLocaleString()}</small>
+            <p>${esc(p.body).replace(/\n/g,'<br>')}</p>
+            <small class="muted">${new Date(p.published_at).toLocaleString()}</small>
             </article>
         `).join('');
         }
 
-        // --- галерея ---
+        // --- Галерея ---
         async function loadGallery() {
-        // читаем файлы из папки photos/ в бакете
         const { data: files, error } = await supabase.storage
             .from(BUCKET)
             .list('photos', { limit: 200, sortBy: { column: 'name', order: 'desc' } });
 
-        if (error) { console.error(error); return; }
-
-        const publicUrl = name =>
-            supabase.storage.from(BUCKET).getPublicUrl('photos/' + name).data.publicUrl;
-
-        gallery.innerHTML = (files || []).map(f =>
-            `<img class="thumb" src="${publicUrl(f.name)}" alt="">`
-        ).join('');
+        if (error) {
+            console.error(error);
+            galleryEl.innerHTML = `<p class="muted">Не удалось загрузить галерею.</p>`;
+            return;
         }
-
-        const postsEl = document.getElementById('posts');
-        const gallery = document.getElementById('gallery');
+        if (!files?.length) {
+            galleryEl.innerHTML = `<p class="muted">Фотографий пока нет.</p>`;
+            return;
+        }
+        const publicUrl = name => supabase.storage.from(BUCKET).getPublicUrl('photos/' + name).data.publicUrl;
+        galleryEl.innerHTML = files.map(f => `<img class="thumb" src="${publicUrl(f.name)}" alt="">`).join('');
+        }
 
         loadPosts();
         loadGallery();
     </script>
-
 </body>
 </html>
