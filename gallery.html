@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Галерея</title>
+  <link rel="stylesheet" href="/assets/styles/index.css">
+  <style>
+    .wrap{ max-width: 1000px; margin: 2rem auto; padding: 0 12px; }
+    .grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:10px; }
+    .thumb{ width:100%; height:auto; display:block; border-radius:.4rem; }
+    .muted{ color:#777 }
+    .btn{ display:inline-block; padding:.6rem 1rem; border-radius:.5rem; border:1px solid #d1d5db; background:#fff; cursor:pointer }
+    .btn[disabled]{ opacity:.5; cursor:default }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Галерея</h1>
+    <p><a href="/">← На главную</a></p>
+
+    <div id="grid" class="grid"></div>
+    <p id="empty" class="muted" style="display:none">Фотографий пока нет.</p>
+    <p style="text-align:center"><button id="moreBtn" class="btn">Загрузить ещё</button></p>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    const SUPABASE_URL  = 'https://xsxorgfkhmeinjrosprt.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzeG9yZ2ZraG1laW5qcm9zcHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkxMjgsImV4cCI6MjA3MDc0NTEyOH0.ojkysEKiLi5xttq7WyfEnt3xjF4PhIVG1tdxrimjTi8';
+    const BUCKET = 'media';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty');
+    const moreBtn = document.getElementById('moreBtn');
+
+    const PAGE = 24;
+    let offset = 0;
+
+    const url = name => supabase.storage.from(BUCKET).getPublicUrl('photos/' + name).data.publicUrl;
+
+    async function loadMore(){
+      const { data: files, error } = await supabase.storage
+        .from(BUCKET)
+        .list('photos', { limit: PAGE, offset, sortBy: { column: 'name', order: 'desc' } });
+
+      if (error) { console.error(error); if(offset===0){ empty.style.display=''; empty.textContent='Ошибка загрузки.' } return; }
+
+      if (!files?.length){
+        if(offset===0){ empty.style.display=''; }
+        moreBtn.disabled = true; moreBtn.textContent = 'Больше нет';
+        return;
+      }
+
+      const html = files.map(f => `<img class="thumb" src="${url(f.name)}" alt="">`).join('');
+      grid.insertAdjacentHTML('beforeend', html);
+
+      offset += files.length;
+      if (files.length < PAGE) { moreBtn.disabled = true; moreBtn.textContent = 'Больше нет'; }
+    }
+
+    moreBtn.onclick = loadMore;
+    loadMore();
+  </script>
+</body>
+</html>

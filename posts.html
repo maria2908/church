@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Все посты</title>
+  <link rel="stylesheet" href="/assets/styles/index.css">
+  <style>
+    .posts{ display:grid; gap:1rem; max-width:1000px; margin: 2rem auto; }
+    .post{ border:1px solid #eee; border-radius:.5rem; padding:1rem; background:#fff }
+    .cover{ max-width: 360px; height:auto; display:block; margin:.5rem 0; }
+    .muted{ color:#777 }
+    .wrap{ max-width: 1000px; margin: 2rem auto; padding: 0 12px; }
+    .btn{ display:inline-block; padding:.6rem 1rem; border-radius:.5rem; border:1px solid #d1d5db; background:#fff; cursor:pointer }
+    .btn[disabled]{ opacity:.5; cursor:default }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Все посты</h1>
+    <p><a href="/">← На главную</a></p>
+
+    <div id="posts" class="posts"><p class="muted">Загружаем…</p></div>
+    <p style="text-align:center"><button id="moreBtn" class="btn">Загрузить ещё</button></p>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    const SUPABASE_URL  = 'https://xsxorgfkhmeinjrosprt.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzeG9yZ2ZraG1laW5qcm9zcHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkxMjgsImV4cCI6MjA3MDc0NTEyOH0.ojkysEKiLi5xttq7WyfEnt3xjF4PhIVG1tdxrimjTi8';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    const postsEl = document.getElementById('posts');
+    const moreBtn = document.getElementById('moreBtn');
+    const PAGE = 12;
+    let page = 0;
+    const esc = s => (s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+    async function loadMore(){
+      const from = page * PAGE;
+      const to   = from + PAGE - 1;
+      const { data: posts, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('published_at', { ascending: false })
+        .range(from, to);
+
+      if (error) { console.error(error); if(page===0) postsEl.innerHTML = `<p class="muted">Ошибка загрузки.</p>`; return; }
+      if (!posts?.length){
+        if(page===0) postsEl.innerHTML = `<p class="muted">Постов пока нет.</p>`;
+        moreBtn.disabled = true; moreBtn.textContent = 'Больше нет';
+        return;
+      }
+      const html = posts.map(p => `
+        <article class="post">
+          ${p.cover_url ? `<img class="cover" src="${p.cover_url}" alt="">` : ''}
+          <h3>${esc(p.title)}</h3>
+          <p>${esc(p.body).replace(/\n/g,'<br>')}</p>
+          <small class="muted">${new Date(p.published_at).toLocaleString()}</small>
+        </article>
+      `).join('');
+      postsEl.insertAdjacentHTML('beforeend', html);
+
+      if (posts.length < PAGE) { moreBtn.disabled = true; moreBtn.textContent = 'Больше нет'; }
+      page++;
+    }
+
+    moreBtn.onclick = loadMore;
+    loadMore();
+  </script>
+</body>
+</html>
