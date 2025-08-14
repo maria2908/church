@@ -92,11 +92,15 @@
     </div>
     <!-- End service_information -->
 
-    <h1>Посты</h1>
-    <div id="posts"></div>
+    <section>
+        <h2>Посты</h2>
+        <div id="posts" class="posts"></div>
+    </section>
 
-    <h2>Галерея</h2>
-    <div id="gallery"></div>
+    <section>
+        <h2>Галерея</h2>
+        <div id="gallery" class="grid"></div>
+    </section>
 
     <!-- Footer -->
     <div class="footer">
@@ -110,29 +114,59 @@
     <script src="./assets/js/main.js"></script>
     <script type="module">
         import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-        const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+
+        const SUPABASE_URL  = 'https://YOUR-PROJECT.supabase.co';
         const SUPABASE_ANON = 'YOUR-ANON-KEY';
+        const BUCKET = 'media';
+
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
-        // Посты
-        const { data: posts } = await supabase
-        .from('posts')
-        .select('*')
-        .order('published_at', { ascending: false });
+        // простая экранизация, чтобы не сломать разметку
+        const esc = s => (s ?? '').replace(/[&<>"']/g, m =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
+        );
 
-        document.getElementById('posts').innerHTML = (posts||[])
-        .map(p => `<article>
-            <h3>${p.title}</h3>
-            ${p.cover_url ? `<img src="${p.cover_url}" alt="" style="max-width:300px">` : ''}
-            <p>${p.body}</p>
+        // --- посты ---
+        async function loadPosts() {
+        const { data: posts, error } = await supabase
+            .from('posts')
+            .select('*')
+            .order('published_at', { ascending: false });
+
+        if (error) { console.error(error); return; }
+
+        postsEl.innerHTML = (posts || []).map(p => `
+            <article class="post">
+            ${p.cover_url ? `<img class="cover" src="${p.cover_url}" alt="">` : ''}
+            <h3>${esc(p.title)}</h3>
+            <p>${esc(p.body).replace(/\n/g, '<br>')}</p>
             <small>${new Date(p.published_at).toLocaleString()}</small>
-        </article>`).join('');
+            </article>
+        `).join('');
+        }
 
-        // Галерея из Storage (список объектов)
-        const { data: files } = await supabase.storage.from('gallery').list('', { limit: 100 });
-        const publicUrl = (name) => supabase.storage.from('gallery').getPublicUrl(name).data.publicUrl;
-        document.getElementById('gallery').innerHTML = (files||[])
-        .map(f => `<img src="${publicUrl(f.name)}" alt="" style="max-width:180px;margin:6px">`).join('');
+        // --- галерея ---
+        async function loadGallery() {
+        // читаем файлы из папки photos/ в бакете
+        const { data: files, error } = await supabase.storage
+            .from(BUCKET)
+            .list('photos', { limit: 200, sortBy: { column: 'name', order: 'desc' } });
+
+        if (error) { console.error(error); return; }
+
+        const publicUrl = name =>
+            supabase.storage.from(BUCKET).getPublicUrl('photos/' + name).data.publicUrl;
+
+        gallery.innerHTML = (files || []).map(f =>
+            `<img class="thumb" src="${publicUrl(f.name)}" alt="">`
+        ).join('');
+        }
+
+        const postsEl = document.getElementById('posts');
+        const gallery = document.getElementById('gallery');
+
+        loadPosts();
+        loadGallery();
     </script>
 
 </body>

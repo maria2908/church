@@ -3,120 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Админ</title>
+  <title>Вход администратора</title>
   <style>
-    form { margin: 1rem 0; border: 1px solid #ccc; padding: 1rem; }
-    input, textarea, button { display:block; margin:.5rem 0; }
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; }
+    input, button { padding:.55rem .7rem; margin:.25rem 0; }
+    #msg { color:crimson }
   </style>
 </head>
 <body>
   <h1>Админ-панель</h1>
-
-  <section id="auth">
-    <h2>Вход</h2>
-    <input id="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Пароль">
-    <button id="loginBtn">Войти</button>
-    <p id="authMsg"></p>
-  </section>
-
-  <section id="adminArea" style="display:none">
-    <button id="logoutBtn">Выйти</button>
-
-    <h2>Новый пост</h2>
-    <form id="postForm">
-      <input id="title" placeholder="Заголовок" required>
-      <textarea id="body" placeholder="Текст" required></textarea>
-      <input type="file" id="cover" accept="image/*">
-      <button>Опубликовать</button>
-      <p id="postMsg"></p>
-    </form>
-
-    <h2>Загрузка в галерею</h2>
-    <form id="photoForm">
-      <input type="file" id="photo" accept="image/*" required>
-      <button>Загрузить</button>
-      <p id="photoMsg"></p>
-    </form>
-  </section>
+  <h2>Вход</h2>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Пароль">
+  <button id="loginBtn">Войти</button>
+  <p id="msg"></p>
 
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-    const SUPABASE_URL = 'https://ljngqrhrzmgtjqkxpkxs.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxqbmdxcmhyem1ndGpxa3hwa3hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5NTI3ODksImV4cCI6MjA2OTUyODc4OX0.WMxtoFKOwoYv00pVfZLjAKGMPvihAazeNgW4A7YS0sQ';
+
+    const SUPABASE_URL  = 'https://xsxorgfkhmeinjrosprt.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzeG9yZ2ZraG1laW5qcm9zcHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkxMjgsImV4cCI6MjA3MDc0NTEyOH0.ojkysEKiLi5xttq7WyfEnt3xjF4PhIVG1tdxrimjTi8';
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    const authMsg = document.getElementById('authMsg');
-    const adminArea = document.getElementById('adminArea');
-
-    async function checkAdmin() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
-      // Проверим, есть ли запись в таблице admins
-      const { data } = await supabase
-        .from('admins')
-        .select('user_id')
-        .eq('user_id', user.id)
-        .single();
+    async function isAdmin(userId) {
+      const { data } = await supabase.from('admins')
+        .select('user_id').eq('user_id', userId).maybeSingle();
       return !!data;
     }
 
-    // Вход
+    // если уже залогинен и он админ — сразу в кабинет
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && await isAdmin(user.id)) location.href = '/dashboard.html';
+    })();
+
     document.getElementById('loginBtn').onclick = async () => {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { authMsg.textContent = error.message; return; }
-      if (await checkAdmin()) {
-        document.getElementById('auth').style.display = 'none';
-        adminArea.style.display = 'block';
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { document.getElementById('msg').textContent = error.message; return; }
+
+      if (await isAdmin(data.user.id)) {
+        location.href = '/dashboard.html';
       } else {
-        authMsg.textContent = 'Нет прав администратора';
+        document.getElementById('msg').textContent = 'Нет прав администратора';
         await supabase.auth.signOut();
       }
-    };
-
-    // Если уже залогинен
-    if (await checkAdmin()) {
-      document.getElementById('auth').style.display = 'none';
-      adminArea.style.display = 'block';
-    }
-
-    // Выход
-    document.getElementById('logoutBtn').onclick = async () => {
-      await supabase.auth.signOut();
-      location.reload();
-    };
-
-    // Новый пост
-    document.getElementById('postForm').onsubmit = async (e) => {
-      e.preventDefault();
-      const title = document.getElementById('title').value.trim();
-      const body = document.getElementById('body').value.trim();
-      let cover_url = null;
-
-      const coverFile = document.getElementById('cover').files[0];
-      if (coverFile) {
-        const fileName = `covers/${Date.now()}_${coverFile.name}`;
-        const { error: upErr } = await supabase.storage.from('gallery').upload(fileName, coverFile);
-        if (upErr) { document.getElementById('postMsg').textContent = upErr.message; return; }
-        cover_url = supabase.storage.from('gallery').getPublicUrl(fileName).data.publicUrl;
-      }
-
-      const { error } = await supabase.from('posts').insert({ title, body, cover_url });
-      document.getElementById('postMsg').textContent = error ? error.message : 'Опубликовано!';
-      if (!error) e.target.reset();
-    };
-
-    // Загрузка в галерею
-    document.getElementById('photoForm').onsubmit = async (e) => {
-      e.preventDefault();
-      const file = document.getElementById('photo').files[0];
-      if (!file) return;
-      const fileName = `gallery/${Date.now()}_${file.name}`;
-      const { error } = await supabase.storage.from('gallery').upload(fileName, file);
-      document.getElementById('photoMsg').textContent = error ? error.message : 'Загружено!';
-      if (!error) e.target.reset();
     };
   </script>
 </body>
