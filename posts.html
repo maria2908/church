@@ -36,6 +36,13 @@
     const PAGE = 12;
     let page = 0;
     const esc = s => (s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    const preview = (txt, n=100) => {
+    const s = (txt ?? '').trim();
+    if (s.length <= n) return s;
+    const cut = s.slice(0, n);
+    const i = cut.lastIndexOf(' ');
+    return (i > 60 ? cut.slice(0, i) : cut) + '…';
+    };
 
     async function loadMore(){
       const from = page * PAGE;
@@ -54,10 +61,11 @@
       }
       const html = posts.map(p => `
         <article class="post">
-          ${p.cover_url ? `<img class="cover" src="${p.cover_url}" alt="">` : ''}
-          <h3>${esc(p.title)}</h3>
-          <p>${esc(p.body).replace(/\n/g,'<br>')}</p>
-          <small class="muted">${new Date(p.published_at).toLocaleString()}</small>
+            ${p.cover_url ? `<img class="cover" src="${p.cover_url}" alt="">` : ''}
+            <h3>${esc(p.title)}</h3>
+            <p>${esc(preview(p.body, 100))}</p>
+            <p><a class="btn" href="/post.html?id=${encodeURIComponent(p.id)}">Читать полностью →</a></p>
+            <small class="muted">${new Date(p.published_at).toLocaleString()}</small>
         </article>
       `).join('');
       postsEl.insertAdjacentHTML('beforeend', html);

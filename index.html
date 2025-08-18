@@ -10,6 +10,7 @@
 
     <link rel="stylesheet" type="text/css" href="./assets/styles/index.css"/>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="./assets/styles/style.css"/>
 
     <title>Парафія Всіх Святих</title>
 
@@ -95,17 +96,21 @@
     </div>
     <!-- End service_information -->
 
-    <section id="posts">
-        <h2>Посты</h2>
-        <div id="posts" class="posts"><p class="muted">Загружаем…</p></div>
-        <a href="/posts.html">Показать все посты →</a>
+    <!-- posts -->
+    <section class="home-block block-posts" id="posts">
+        <h2>Пости</h2>
+        <div id="posts-list" class="posts"><p class="muted">Загружаємо…</p></div>
+        <p class="view-all"><a class="btn" href="./posts.html">Усі пости</a></p>
     </section>
+    <!-- End posts -->
 
-    <section id="gallery">
+    <!-- gallery -->
+    <section id="gallery" class="home-block gallery">
         <h2>Галерея</h2>
-        <div id="gallery" class="grid"><p class="muted">Загружаем…</p></div>
-        <a href="/gallery.html">Показать всю галерею →</a>
+        <div id="gallery-grid" class="grid"><p class="muted">Загружаємо…</p></div>
+        <p class="view-all"><a class="btn" href="./gallery.html">Усі фото</a></p>
     </section>
+    <!-- End gallery -->
 
     <!-- Footer -->
     <div class="footer">
@@ -122,50 +127,62 @@
 
         const SUPABASE_URL  = 'https://xsxorgfkhmeinjrosprt.supabase.co';
         const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzeG9yZ2ZraG1laW5qcm9zcHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkxMjgsImV4cCI6MjA3MDc0NTEyOH0.ojkysEKiLi5xttq7WyfEnt3xjF4PhIVG1tdxrimjTi8';
-        const BUCKET = 'media'; // <- имя бакета с фото
+        const BUCKET = 'media'; 
 
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
-        const postsEl = document.getElementById('posts');
-        const galleryEl = document.getElementById('gallery');
 
+        const postsEl   = document.getElementById('posts-list');  
+        const galleryEl = document.getElementById('gallery-grid'); 
         const esc = s => (s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        const preview = (txt, n=100) => {
+            const s = (txt ?? '').trim();
+            if (s.length <= n) return s;
+            const cut = s.slice(0, n);
+            const i = cut.lastIndexOf(' ');
+            return (i > 60 ? cut.slice(0, i) : cut) + '…';
+        };
 
-        // Посты: последние 6
-        async function loadPosts() {
+        async function loadPosts(){
+
+            const isPhone = window.matchMedia('(max-width: 640px)').matches;
+            const limit = isPhone ? 2 : 6;
+
             const { data: posts, error } = await supabase
             .from('posts')
             .select('*')
             .order('published_at', { ascending: false })
-            .limit(6);
+            .limit(limit);
 
-            if (error) { console.error(error); postsEl.innerHTML = `<p class="muted">Не удалось загрузить посты.</p>`; return; }
-            if (!posts?.length) { postsEl.innerHTML = `<p class="muted">Постов пока нет.</p>`; return; }
+            if (error) { console.error(error); postsEl.innerHTML = `<p class="muted">Помилка: ${esc(error.message)}</p>`; return; }
+            if (!posts?.length){ postsEl.innerHTML = `<p class="muted">Постів поки немає.</p>`; return; }
 
             postsEl.innerHTML = posts.map(p => `
-            <article class="post">
+            <div class="post">
                 ${p.cover_url ? `<img class="cover" src="${p.cover_url}" alt="">` : ''}
                 <h3>${esc(p.title)}</h3>
-                <p>${esc(p.body).replace(/\n/g,'<br>')}</p>
-                <small class="muted">${new Date(p.published_at).toLocaleString()}</small>
-            </article>
-            `).join('');
+                <p>${esc(preview(p.body, 100))}</p>
+                <div>
+                    <small class="muted">${new Date(p.published_at).toLocaleString()}</small>
+                    <p><a class="btn" href="/post.html?id=${encodeURIComponent(p.id)}">Читати даліі</a></p>
+                </div>
 
-            // ссылка «все посты»
-            addViewAllLink(postsSection, 'posts.html', 'Показать все посты →');
+            </div>
+            `).join('');
         }
 
-        // Галерея: последние 6 (сортировка по имени ↓, т.к. мы кладём файлы как Date.now()_name)
-        async function loadGallery() {
+        async function loadGallery(){
+            const isPhone = window.matchMedia('(max-width: 640px)').matches;
+            const limit = isPhone ? 2 : 6;
+
             const { data: files, error } = await supabase.storage
             .from(BUCKET)
-            .list('photos', { limit: 6, offset: 0, sortBy: { column: 'name', order: 'desc' } });
+            .list('photos', { limit: limit, offset: 0, sortBy: { column: 'name', order: 'desc' } });
 
-            if (error) { console.error(error); galleryEl.innerHTML = `<p class="muted">Не удалось загрузить галерею.</p>`; return; }
-            if (!files?.length) { galleryEl.innerHTML = `<p class="muted">Фотографий пока нет.</p>`; return; }
+            if (error) { console.error(error); galleryEl.innerHTML = `<p class="muted">Помилка: ${esc(error.message)}</p>`; return; }
+            if (!files?.length){ galleryEl.innerHTML = `<p class="muted">Фотографій поки немає.</p>`; return; }
 
             const publicUrl = name => supabase.storage.from(BUCKET).getPublicUrl('photos/' + name).data.publicUrl;
             galleryEl.innerHTML = files.map(f => `<img class="thumb" src="${publicUrl(f.name)}" alt="">`).join('');
-            addViewAllLink(gallerySection, 'gallery.html', 'Показать всю галерею →');
         }
 
         loadPosts();
