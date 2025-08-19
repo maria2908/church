@@ -13,7 +13,7 @@ body {
   display: block;
   margin: 0 auto;
   padding: 1rem;
-  max-width: 350px;
+  width: min(420px, 92vw);
   border-radius: 0.5rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
@@ -37,14 +37,22 @@ body {
 }
 
 .input-container input {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
   background-color: #fff;
   padding: 1rem;
   padding-right: 3rem;
   font-size: 0.875rem;
   line-height: 1.25rem;
-  width: 300px;
   border-radius: 0.5rem;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.form textarea{
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
 }
 
 .input-container span {
