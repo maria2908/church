@@ -1,68 +1,173 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ua">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Галерея</title>
   <link rel="stylesheet" href="/assets/styles/index.css">
-  <style>
-    .wrap{ max-width: 1000px; margin: 2rem auto; padding: 0 12px; }
-    .grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:10px; }
-    .thumb{ width:100%; height:auto; display:block; border-radius:.4rem; }
-    .muted{ color:#777 }
-    .btn{ display:inline-block; padding:.6rem 1rem; border-radius:.5rem; border:1px solid #d1d5db; background:#fff; cursor:pointer }
-    .btn[disabled]{ opacity:.5; cursor:default }
-  </style>
+  <link rel="stylesheet" type="text/css" href="./assets/styles/gallery.css"/>
+  <link rel="stylesheet" type="text/css" href="./assets/styles/spinner.css"/>
+  <link rel="icon" href="./assets/img/logo.png">
+
 </head>
 <body>
   <div class="wrap">
     <h1>Галерея</h1>
-    <p><a href="/">← На главную</a></p>
+    <p><a href="/">← На главну</a></p>
+
+    <div id="lightbox" class="lightbox" hidden>
+        <button id="lbPrev" class="lightbox__nav prev" aria-label="Попереднє">‹</button>
+        <img id="lbImg" class="lightbox__img" alt="">
+        <button id="lbNext" class="lightbox__nav next" aria-label="Наступне">›</button>
+        <button id="lbClose" class="lightbox__close" aria-label="Закрыть">✕</button>
+    </div>
 
     <div id="grid" class="grid"></div>
-    <p id="empty" class="muted" style="display:none">Фотографий пока нет.</p>
-    <p style="text-align:center"><button id="moreBtn" class="btn">Загрузить ещё</button></p>
+    <p id="empty" class="muted" style="display:none">Фотографій поки немає.</p>
+
+    <div id="loader" class="loader" aria-live="polite">
+        <div class="spinner" role="status" aria-label="Завантаження"></div>
+    </div>
+
+    <p style="text-align:center"><button id="moreBtn" class="btn">Загрузити ще</button></p>
   </div>
 
-  <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    const SUPABASE_URL  = 'https://xsxorgfkhmeinjrosprt.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzeG9yZ2ZraG1laW5qcm9zcHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkxMjgsImV4cCI6MjA3MDc0NTEyOH0.ojkysEKiLi5xttq7WyfEnt3xjF4PhIVG1tdxrimjTi8';
-    const BUCKET = 'media';
+        const SUPABASE_URL  = 'https://xsxorgfkhmeinjrosprt.supabase.co';
+            const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzeG9yZ2ZraG1laW5qcm9zcHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkxMjgsImV4cCI6MjA3MDc0NTEyOH0.ojkysEKiLi5xttq7WyfEnt3xjF4PhIVG1tdxrimjTi8';
+            const BUCKET = 'media';
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
-    const grid = document.getElementById('grid');
-    const empty = document.getElementById('empty');
-    const moreBtn = document.getElementById('moreBtn');
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    const PAGE = 24;
-    let offset = 0;
+        const grid    = document.getElementById('grid');
+        const empty   = document.getElementById('empty');
+        const moreBtn = document.getElementById('moreBtn');
 
-    const url = name => supabase.storage.from(BUCKET).getPublicUrl('photos/' + name).data.publicUrl;
+        const lb      = document.getElementById('lightbox');
+        const lbImg   = document.getElementById('lbImg');
+        const lbClose = document.getElementById('lbClose');
+        const lbPrev  = document.getElementById('lbPrev');
+        const lbNext  = document.getElementById('lbNext');
 
-    async function loadMore(){
-      const { data: files, error } = await supabase.storage
-        .from(BUCKET)
-        .list('photos', { limit: PAGE, offset, sortBy: { column: 'name', order: 'desc' } });
+        const PAGE = 24;
+        let offset = 0;
+        const images = []; 
+        let current = 0;  
 
-      if (error) { console.error(error); if(offset===0){ empty.style.display=''; empty.textContent='Ошибка загрузки.' } return; }
+        const publicUrl = (name) =>
+            supabase.storage.from(BUCKET).getPublicUrl('photos/' + name).data.publicUrl;
 
-      if (!files?.length){
-        if(offset===0){ empty.style.display=''; }
-        moreBtn.disabled = true; moreBtn.textContent = 'Больше нет';
-        return;
-      }
+        const loader = document.getElementById('loader');
 
-      const html = files.map(f => `<img class="thumb" src="${url(f.name)}" alt="">`).join('');
-      grid.insertAdjacentHTML('beforeend', html);
+        async function loadMore() {
+            loader.classList.add('show');
+            moreBtn.disabled = true;
 
-      offset += files.length;
-      if (files.length < PAGE) { moreBtn.disabled = true; moreBtn.textContent = 'Больше нет'; }
-    }
+            const { data: files, error } = await supabase.storage
+            .from(BUCKET)
+            .list('photos', {
+                limit: PAGE,
+                offset,
+                sortBy: { column: 'name', order: 'desc' }
+            });
 
-    moreBtn.onclick = loadMore;
-    loadMore();
-  </script>
+            loader.classList.remove('show');
+
+            if (error) {
+            console.error(error);
+            if (offset === 0) {
+                empty.style.display = '';
+                empty.textContent = 'Помилка загрузки.';
+            }
+            moreBtn.disabled = false;
+            return;
+            }
+
+            if (!files || files.length === 0) {
+            if (offset === 0) empty.style.display = '';
+            moreBtn.disabled = true;
+            moreBtn.textContent = 'Усі фотографії загружено';
+            return;
+            }
+
+            let base = images.length;
+
+            const html = files.map((f, i) => {
+            const url = publicUrl(f.name);
+            images.push(url); 
+            const idx = base + i;
+            return `
+                <button type="button" class="thumb-btn" data-idx="${idx}" aria-label="Открыть фото">
+                <img class="thumb" loading="lazy" src="${url}" alt="">
+                </button>
+            `;
+            }).join('');
+
+            grid.insertAdjacentHTML('beforeend', html);
+
+            offset += files.length;
+
+            if (files.length < PAGE) {
+            moreBtn.disabled = true;
+            moreBtn.textContent = 'Усі фотографії загружено';
+            } else {
+            moreBtn.disabled = false;
+            }
+        }
+
+        function openLightbox(i) {
+            if (!images.length) return;
+            current = Math.max(0, Math.min(i, images.length - 1));
+            lbImg.src = images[current];
+            lb.hidden = false;
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            lb.hidden = true;
+            lbImg.src = '';
+            document.body.style.overflow = '';
+        }
+
+        function next() {
+            if (!images.length) return;
+            current = (current + 1) % images.length;
+            lbImg.src = images[current];
+        }
+
+        function prev() {
+            if (!images.length) return;
+            current = (current - 1 + images.length) % images.length;
+            lbImg.src = images[current];
+        }
+
+        grid.addEventListener('click', (e) => {
+            const btn = e.target.closest('.thumb-btn');
+            if (!btn) return;
+            const idx = Number(btn.dataset.idx);
+            if (Number.isNaN(idx)) return;
+            openLightbox(idx);
+        });
+
+        lbClose.addEventListener('click', closeLightbox);
+        lbNext .addEventListener('click', next);
+        lbPrev .addEventListener('click', prev);
+
+        lb.addEventListener('click', (e) => {
+            if (e.target === lb) closeLightbox();
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (lb.hidden) return;
+            if (e.key === 'Escape')      return closeLightbox();
+            if (e.key === 'ArrowRight')  return next();
+            if (e.key === 'ArrowLeft')   return prev();
+        });
+
+        moreBtn.onclick = loadMore;
+        loadMore();
+    </script>
 </body>
 </html>

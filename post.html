@@ -1,22 +1,29 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ua">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Пост</title>
   <link rel="stylesheet" href="/assets/styles/index.css">
+  <link rel="stylesheet" type="text/css" href="./assets/styles/post.css"/>
+  <link rel="stylesheet" type="text/css" href="./assets/styles/spinner.css"/>
+  <link rel="icon" href="./assets/img/logo.png">
   <style>
-    .wrap{ max-width: 900px; margin: 2rem auto; padding: 0 12px; }
-    .cover{ width:100%; max-width: 900px; aspect-ratio: 16/9; object-fit: cover; border-radius: 12px; }
-    .muted{ color:#777 }
+
   </style>
 </head>
 <body>
   <div class="wrap">
-    <p><a href="/posts.html">← Все посты</a></p>
-    <h1 id="title">Пост</h1>
+
+    <p><a href="/posts.html">← Усі пости</a></p>
+
+    <div id="loader" class="loader" aria-live="polite">
+        <div class="spinner" role="status" aria-label="Завантаження"></div>
+    </div>
+
     <img id="cover" class="cover" alt="" style="display:none">
-    <p><small id="date" class="muted"></small></p>
+    <h1 id="title">Пост</h1>
+    <p class="date"><small id="date" class="muted"></small></p>
     <div id="body"></div>
   </div>
 
@@ -29,17 +36,23 @@
 
     const params = new URLSearchParams(location.search);
     const id = params.get('id');
+    const loader = document.getElementById('loader');
 
     const esc = s => (s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
     if (!id) {
       document.getElementById('title').textContent = 'Пост не найден';
     } else {
+      loader.classList.add('show');
+
       const { data: p, error } = await supabase
         .from('posts')
         .select('*')
         .eq('id', id)
         .maybeSingle();
+
+      loader.classList.remove('show');
+      
 
       if (error || !p) {
         document.getElementById('title').textContent = 'Пост не найден';
@@ -54,7 +67,6 @@
           img.style.display = '';
         }
 
-        // рендерим весь текст поста, с переносами строк
         document.getElementById('body').innerHTML = esc(p.body).replace(/\n/g,'<br>');
       }
     }

@@ -1,55 +1,55 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ua">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Логін</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 2rem auto; }
-    form, .card { border:1px solid #ddd; padding:1rem; border-radius:.5rem; margin:1rem 0; }
-    input, textarea, button { padding:.55rem .7rem; margin:.25rem 0; width:100%; max-width:650px; }
-    table { border-collapse: collapse; width:100%; }
-    td, th { border: 1px solid #eee; padding:.5rem; vertical-align: top; }
-    img { max-width: 160px; height:auto; display:block; }
-    .row { display:grid; grid-template-columns: 1fr 1fr; gap:1rem; }
-  </style>
+  <title>Адмін панель</title>
+  <link rel="stylesheet" type="text/css" href="./assets/styles/dashboard.css"/>
+  <link rel="icon" href="./assets/img/logo.png">
+  <link rel="stylesheet" type="text/css" href="./assets/styles/spinner.css"/>
 </head>
 <body>
-  <h1>Логін</h1>
-  <button id="logoutBtn">Выйти</button>
+  <h1>Адмін панель</h1>
+  <button id="logoutBtn">Вийти</button>
 
   <div class="row">
     <div class="card">
-      <h2>Новый пост / Редактирование</h2>
-      <form id="postForm">
-        <input id="postId" type="hidden">
-        <input id="title" placeholder="Заголовок" required>
-        <textarea id="body" placeholder="Текст" rows="6" required></textarea>
-
-        <label>Обложка (необязательно): <input type="file" id="cover" accept="image/*"></label>
-        <label><input type="checkbox" id="clearCover"> Удалить текущую обложку</label>
-
-        <button>Сохранить</button>
-        <button type="button" id="resetBtn">Очистить</button>
-        <p id="postMsg"></p>
-      </form>
-    </div>
-
-    <div class="card">
       <h2>Загрузка в галерею</h2>
       <form id="photoForm">
-        <input type="file" id="photo" accept="image/*" required>
-        <button>Загрузить</button>
+        <input class="file" type="file" id="photo" accept="image/*" required>
+        <button>Загрузити</button>
         <p id="photoMsg"></p>
       </form>
+      <div id="loader" class="loader" aria-live="polite">
+          <div class="spinner" role="status" aria-label="Завантаження"></div>
+      </div>
       <div id="gallery"></div>
     </div>
   </div>
 
   <div class="card">
-    <h2>Посты</h2>
-    <table>
-      <thead><tr><th>ID</th><th>Заголовок</th><th>Обложка</th><th>Дата</th><th>Действия</th></tr></thead>
+    <h2>Новий пост / Редактувати</h2>
+    <form id="postForm">
+      <input id="postId" type="hidden">
+      <input id="title" placeholder="Заголовок" type="text" required>
+      <textarea id="body" placeholder="Текст" rows="6" required></textarea>
+
+      <label>Фото (необ`язкове): <input type="file" id="cover" accept="image/*"></label>
+      <label><input type="checkbox" id="clearCover">Видалити поточну обложку</label>
+
+      <button>Зберегти</button>
+      <button type="button" id="resetBtn">Очистити</button>
+      <p id="postMsg"></p>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Пости</h2>
+      <div id="loader" class="loader" aria-live="polite">
+        <div class="spinner" role="status" aria-label="Завантаження"></div>
+      </div>
+    <table class="table-scroll">
+      <thead><tr><th>ID</th><th>Заголовок</th><th>Фото</th><th>Дата</th><th>Дії</th></tr></thead>
       <tbody id="postsTable"></tbody>
     </table>
   </div>
@@ -59,41 +59,43 @@
 
     const SUPABASE_URL  = 'https://xsxorgfkhmeinjrosprt.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzeG9yZ2ZraG1laW5qcm9zcHJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjkxMjgsImV4cCI6MjA3MDc0NTEyOH0.ojkysEKiLi5xttq7WyfEnt3xjF4PhIVG1tdxrimjTi8';
-    const BUCKET = 'media'; // имя бакета в Storage: media/covers и media/photos
+    const BUCKET = 'media'; 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+    const loader = document.getElementById('loader');
 
     async function isAdmin(userId){
       const { data } = await supabase.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
       return !!data;
     }
 
-    // Guard: только админ
     (async ()=>{
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !(await isAdmin(user.id))) { location.href = '/login.html'; return; }
       await loadPosts(); await loadGallery();
     })();
 
-    // Кнопка "Выйти"
     document.getElementById('logoutBtn').onclick = async () => {
       await supabase.auth.signOut();
       location.href = '/login.html';
     };
 
-    // ===== Helpers =====
     function pathFromPublicUrl(url){
-      // https://<proj>.supabase.co/storage/v1/object/public/<BUCKET>/<path>
       const marker = `/object/public/${BUCKET}/`;
       const i = url.indexOf(marker);
       return i === -1 ? null : url.slice(i + marker.length);
     }
 
-    // ===== POSTS =====
     async function loadPosts(){
+      loader.classList.add('show');
       const { data: posts, error } = await supabase.from('posts')
         .select('*').order('published_at', { ascending:false });
+
+      loader.classList.remove('show');
+
       if (error) { alert(error.message); return; }
+
       const tbody = document.getElementById('postsTable');
+
       tbody.innerHTML = (posts||[]).map(p => `
         <tr>
           <td>${p.id}</td>
@@ -101,8 +103,8 @@
           <td>${p.cover_url ? `<img src="${p.cover_url}" alt="">` : '—'}</td>
           <td>${new Date(p.published_at).toLocaleString()}</td>
           <td>
-            <button data-edit="${p.id}">Редактировать</button>
-            <button data-del="${p.id}">Удалить</button>
+            <button data-edit="${p.id}">Редактувати</button>
+            <button data-del="${p.id}">Видалити</button>
           </td>
         </tr>`).join('');
       tbody.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => fillForm(+b.dataset.edit, posts));
@@ -113,7 +115,7 @@
       const p = posts.find(x => x.id === id);
       postId.value = p.id; title.value = p.title; body.value = p.body;
       clearCover.checked = false;
-      postMsg.textContent = 'Редактирование #' + p.id;
+      postMsg.textContent = 'Редактувати #' + p.id;
       window.scrollTo({top:0, behavior:'smooth'});
     }
 
@@ -129,7 +131,6 @@
       let newCoverUrl = null;
       let oldCoverPath = null;
 
-      // если выбрали новую обложку — загружаем в Storage
       const file = cover.files[0];
       if (file) {
         const path = `covers/${Date.now()}_${file.name}`;
@@ -137,7 +138,7 @@
         if (upErr) { postMsg.textContent = upErr.message; return; }
         newCoverUrl = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 
-        if (id) { // готовим удаление старой
+        if (id) { 
           const { data: old } = await supabase.from('posts').select('cover_url').eq('id', id).maybeSingle();
           if (old?.cover_url) oldCoverPath = pathFromPublicUrl(old.cover_url);
         }
@@ -155,7 +156,7 @@
       else     ({ error } = await supabase.from('posts').insert(payload));
 
       if (!error && oldCoverPath) {
-        await supabase.storage.from(BUCKET).remove([oldCoverPath]); // не критично, если не удалится
+        await supabase.storage.from(BUCKET).remove([oldCoverPath]); 
       }
 
       postMsg.textContent = error ? error.message : 'Сохранено!';
@@ -163,30 +164,40 @@
     };
 
     async function deletePost(id){
-      if (!confirm('Удалить пост #'+id+'?')) return;
+      if (!confirm('Видалити пост #'+id+'?')) return;
+
       const { data: old } = await supabase.from('posts').select('cover_url').eq('id', id).maybeSingle();
       const { error } = await supabase.from('posts').delete().eq('id', id);
+
       if (!error && old?.cover_url) {
         const p = pathFromPublicUrl(old.cover_url);
+
         if (p) await supabase.storage.from(BUCKET).remove([p]);
       }
       if (error) alert(error.message); else loadPosts();
     }
 
-    // ===== GALLERY =====
     async function loadGallery(){
+      loader.classList.add('show');
       const { data: files, error } = await supabase.storage.from(BUCKET)
         .list('photos', { limit:200, sortBy:{ column:'name', order:'desc' } });
+
+      loader.classList.remove('show');
+
       if (error) { console.warn(error); return; }
+
       const url = (name) => supabase.storage.from(BUCKET).getPublicUrl('photos/'+name).data.publicUrl;
+
       const el = document.getElementById('gallery');
+
       el.innerHTML = (files||[]).map(f => `
         <div style="display:inline-block;margin:6px;text-align:center">
           <img src="${url(f.name)}" alt="" style="max-width:160px;display:block">
-          <button data-rm="${f.name}">Удалить</button>
+          <button data-rm="${f.name}">Видалити</button>
         </div>`).join('');
+
       el.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => {
-        if (!confirm('Удалить фото?')) return;
+        if (!confirm('Видалити фото?')) return;
         const { error } = await supabase.storage.from(BUCKET).remove(['photos/'+b.dataset.rm]);
         if (error) alert(error.message); else loadGallery();
       });

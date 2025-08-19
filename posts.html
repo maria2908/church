@@ -1,27 +1,23 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ua">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Все посты</title>
+  <title>Усі пости</title>
   <link rel="stylesheet" href="/assets/styles/index.css">
-  <style>
-    .posts{ display:grid; gap:1rem; max-width:1000px; margin: 2rem auto; }
-    .post{ border:1px solid #eee; border-radius:.5rem; padding:1rem; background:#fff }
-    .cover{ max-width: 360px; height:auto; display:block; margin:.5rem 0; }
-    .muted{ color:#777 }
-    .wrap{ max-width: 1000px; margin: 2rem auto; padding: 0 12px; }
-    .btn{ display:inline-block; padding:.6rem 1rem; border-radius:.5rem; border:1px solid #d1d5db; background:#fff; cursor:pointer }
-    .btn[disabled]{ opacity:.5; cursor:default }
-  </style>
+  <link rel="stylesheet" type="text/css" href="./assets/styles/style.css"/>
+  <link rel="stylesheet" type="text/css" href="./assets/styles/spinner.css"/>
+  <link rel="icon" href="./assets/img/logo.png">
 </head>
 <body>
-  <div class="wrap">
-    <h1>Все посты</h1>
-    <p><a href="/">← На главную</a></p>
-
-    <div id="posts" class="posts"><p class="muted">Загружаем…</p></div>
-    <p style="text-align:center"><button id="moreBtn" class="btn">Загрузить ещё</button></p>
+  <div class="wrap main-posts">
+    <h1>Усі пости</h1>
+    <p><a href="/">← Назад на головну</a></p>
+    <div id="loader" class="loader" aria-live="polite">
+        <div class="spinner" role="status" aria-label="Завантаження"></div>
+    </div>
+    <div id="posts" class="posts"><p class="muted"></p></div>
+    <p style="text-align:center; padding: 5px 0; margin: 0;"><button id="moreBtn" class="btn">Загрузити ще</button></p>
   </div>
 
   <script type="module">
@@ -36,42 +32,67 @@
     const PAGE = 12;
     let page = 0;
     const esc = s => (s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    
     const preview = (txt, n=100) => {
-    const s = (txt ?? '').trim();
-    if (s.length <= n) return s;
-    const cut = s.slice(0, n);
-    const i = cut.lastIndexOf(' ');
-    return (i > 60 ? cut.slice(0, i) : cut) + '…';
+        const s = (txt ?? '').trim();
+        if (s.length <= n) return s;
+        const cut = s.slice(0, n);
+        const i = cut.lastIndexOf(' ');
+        return (i > 60 ? cut.slice(0, i) : cut) + '…';
     };
 
-    async function loadMore(){
-      const from = page * PAGE;
-      const to   = from + PAGE - 1;
-      const { data: posts, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('published_at', { ascending: false })
-        .range(from, to);
+    const loader = document.getElementById('loader');
 
-      if (error) { console.error(error); if(page===0) postsEl.innerHTML = `<p class="muted">Ошибка загрузки.</p>`; return; }
-      if (!posts?.length){
-        if(page===0) postsEl.innerHTML = `<p class="muted">Постов пока нет.</p>`;
-        moreBtn.disabled = true; moreBtn.textContent = 'Больше нет';
-        return;
-      }
-      const html = posts.map(p => `
-        <article class="post">
+    async function loadMore() {
+      loader.classList.add('show');
+        moreBtn.disabled = true; // чтобы не накликивали
+        const from = page * PAGE;
+        const to   = from + PAGE - 1;
+
+        const { data: posts, error } = await supabase
+            .from('posts')
+            .select('*')
+            .order('published_at', { ascending: false })
+            .range(from, to);
+
+        loader.classList.remove('show');
+
+        if (error) {
+            console.error(error);
+            if (page === 0) postsEl.innerHTML = `<p class="muted">Ошибка загрузки.</p>`;
+            moreBtn.disabled = false;
+            return;
+        }
+
+        if (!posts?.length) {
+            if (page === 0) postsEl.innerHTML = `<p class="muted">Постов пока нет.</p>`;
+            moreBtn.disabled = true;
+            moreBtn.textContent = 'Больше нет';
+            return;
+        }
+
+        // САМЫЙ ВАЖНЫЙ МОМЕНТ: убираем "Загружаем…" на первой странице
+        if (page === 0) postsEl.innerHTML = '';
+
+        const html = posts.map(p => `
+            <article class="post">
             ${p.cover_url ? `<img class="cover" src="${p.cover_url}" alt="">` : ''}
             <h3>${esc(p.title)}</h3>
             <p>${esc(preview(p.body, 100))}</p>
-            <p><a class="btn" href="/post.html?id=${encodeURIComponent(p.id)}">Читать полностью →</a></p>
+            <p><a class="btn" href="/post.html?id=${encodeURIComponent(p.id)}">Читати більше</a></p>
             <small class="muted">${new Date(p.published_at).toLocaleString()}</small>
-        </article>
-      `).join('');
-      postsEl.insertAdjacentHTML('beforeend', html);
+            </article>
+        `).join('');
 
-      if (posts.length < PAGE) { moreBtn.disabled = true; moreBtn.textContent = 'Больше нет'; }
-      page++;
+        postsEl.insertAdjacentHTML('beforeend', html);
+
+        page++;
+        if (posts.length < PAGE) {
+            moreBtn.disabled = true;
+            moreBtn.textContent = 'Усі пости загружені';
+        } else {
+            moreBtn.disabled = false;
+        }
     }
 
     moreBtn.onclick = loadMore;

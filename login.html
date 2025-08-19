@@ -1,18 +1,33 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ua">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Вход администратора</title>
-  <link rel="stylesheet" href="/assets/styles/admin.css">
+  <link rel="icon" href="./assets/img/logo.png">
+  <title>Вхід адміністратора</title>
+  <link rel="stylesheet" type="text/css" href="./assets/styles/login.css"/>
 </head>
 <body>
-  <h1>Админ-панель</h1>
-  <h2>Вход</h2>
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Пароль">
-  <button id="loginBtn">Войти</button>
-  <p id="msg"></p>
+
+  <form class="form" id="loginForm" autocomplete="on">
+    <p class="form-title">Логін</p>
+
+    <div class="input-container">
+      <input id="email" placeholder="Введіть email" type="email" autocomplete="username" required>
+      <span aria-hidden="true">
+        <svg stroke="currentColor" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+        </svg>
+      </span>
+    </div>
+
+    <div class="input-container">
+      <input id="password" placeholder="Введіть пароль" type="password" autocomplete="current-password" required>
+    </div>
+
+    <p id="msg"></p>
+    <button class="submit" type="submit" id="loginBtn">Увійти</button>
+  </form>
 
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -22,31 +37,49 @@
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
     async function isAdmin(userId) {
-      const { data } = await supabase.from('admins')
-        .select('user_id').eq('user_id', userId).maybeSingle();
+      const { data } = await supabase
+        .from('admins')
+        .select('user_id')
+        .eq('user_id', userId)
+        .maybeSingle();
       return !!data;
     }
 
-    // если уже залогинен и он админ — сразу в кабинет
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user && await isAdmin(user.id)) location.href = '/dashboard.html';
     })();
 
-    document.getElementById('loginBtn').onclick = async () => {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
+    const form       = document.getElementById('loginForm');
+    const msg        = document.getElementById('msg');
+    const btn        = document.getElementById('loginBtn');
+    const emailInput = document.getElementById('email');
+    const passInput  = document.getElementById('password');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = '';
+      btn.disabled = true;
+
+      const email = emailInput.value.trim();
+      const password = passInput.value;
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { document.getElementById('msg').textContent = error.message; return; }
+
+      if (error) {
+        msg.textContent = error.message;
+        btn.disabled = false;
+        return;
+      }
 
       if (await isAdmin(data.user.id)) {
         location.href = '/dashboard.html';
       } else {
-        document.getElementById('msg').textContent = 'Нет прав администратора';
+        msg.textContent = 'Нет прав администратора';
         await supabase.auth.signOut();
+        btn.disabled = false;
       }
-    };
+    });
   </script>
 </body>
 </html>

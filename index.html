@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ua">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <link rel="icon" href="./assets/img/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> 
     <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
@@ -11,7 +11,7 @@
     <link rel="stylesheet" type="text/css" href="./assets/styles/index.css"/>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" type="text/css" href="./assets/styles/style.css"/>
-
+<link rel="stylesheet" type="text/css" href="./assets/styles/spinner.css"/>
     <title>Парафія Всіх Святих</title>
 
     <style>
@@ -99,16 +99,22 @@
     <!-- posts -->
     <section class="home-block block-posts" id="posts">
         <h2>Пости</h2>
+        <div id="loader" class="loader" aria-live="polite">
+            <div class="spinner" role="status" aria-label="Завантаження"></div>
+        </div>
         <div id="posts-list" class="posts"><p class="muted">Загружаємо…</p></div>
-        <p class="view-all"><a class="btn" href="./posts.html">Усі пости</a></p>
+        <p class="view-all"><a class="btn-all" href="./posts.html">Усі пости</a></p>
     </section>
     <!-- End posts -->
 
     <!-- gallery -->
     <section id="gallery" class="home-block gallery">
         <h2>Галерея</h2>
+        <div id="loader" class="loader" aria-live="polite">
+            <div class="spinner" role="status" aria-label="Завантаження"></div>
+        </div>
         <div id="gallery-grid" class="grid"><p class="muted">Загружаємо…</p></div>
-        <p class="view-all"><a class="btn" href="./gallery.html">Усі фото</a></p>
+        <p class="view-all"><a class="btn-all" href="./gallery.html">Усі фото</a></p>
     </section>
     <!-- End gallery -->
 
@@ -134,24 +140,30 @@
         const postsEl   = document.getElementById('posts-list');  
         const galleryEl = document.getElementById('gallery-grid'); 
         const esc = s => (s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        
+        
         const preview = (txt, n=100) => {
-            const s = (txt ?? '').trim();
+            const s = (txt ?? '').replace(/\s+/g, ' ').trim(); 
             if (s.length <= n) return s;
-            const cut = s.slice(0, n);
+            const cut = s.slice(0, n - 1);                     
             const i = cut.lastIndexOf(' ');
-            return (i > 60 ? cut.slice(0, i) : cut) + '…';
+            return (i >= 60 ? cut.slice(0, i) : cut).trimEnd() + '…';
         };
 
-        async function loadPosts(){
+        const loader = document.getElementById('loader');
 
+        async function loadPosts(){
+            loader.classList.add('show');
             const isPhone = window.matchMedia('(max-width: 640px)').matches;
-            const limit = isPhone ? 2 : 6;
+            const limit = isPhone ? 3 : 6;
 
             const { data: posts, error } = await supabase
             .from('posts')
             .select('*')
             .order('published_at', { ascending: false })
             .limit(limit);
+
+            loader.classList.remove('show');
 
             if (error) { console.error(error); postsEl.innerHTML = `<p class="muted">Помилка: ${esc(error.message)}</p>`; return; }
             if (!posts?.length){ postsEl.innerHTML = `<p class="muted">Постів поки немає.</p>`; return; }
@@ -163,21 +175,24 @@
                 <p>${esc(preview(p.body, 100))}</p>
                 <div>
                     <small class="muted">${new Date(p.published_at).toLocaleString()}</small>
-                    <p><a class="btn" href="/post.html?id=${encodeURIComponent(p.id)}">Читати даліі</a></p>
                 </div>
+                <p class='btn-p'><a class="btn" href="/post.html?id=${encodeURIComponent(p.id)}">Читати більше</a></p>
+
 
             </div>
             `).join('');
         }
 
         async function loadGallery(){
+            loader.classList.add('show');
             const isPhone = window.matchMedia('(max-width: 640px)').matches;
-            const limit = isPhone ? 2 : 6;
+            const limit = isPhone ? 3 : 6;
 
             const { data: files, error } = await supabase.storage
             .from(BUCKET)
             .list('photos', { limit: limit, offset: 0, sortBy: { column: 'name', order: 'desc' } });
 
+            loader.classList.remove('show');
             if (error) { console.error(error); galleryEl.innerHTML = `<p class="muted">Помилка: ${esc(error.message)}</p>`; return; }
             if (!files?.length){ galleryEl.innerHTML = `<p class="muted">Фотографій поки немає.</p>`; return; }
 

@@ -1,0 +1,20 @@
+
+.loader {
+  display: none;              
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(0,0,0,.15);
+  border-top-color: #D4AF37;  
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loader.show { display: flex; }

@@ -1,0 +1,25 @@
+.wrap{ 
+    max-width: 900px; 
+    margin: 2rem auto;
+    padding: 0 12px; 
+}
+.cover { 
+    width:100%; 
+    max-width: 900px; 
+    aspect-ratio: 16/9; 
+    object-fit: cover; 
+    border-radius: 12px; 
+}
+.muted{ 
+    color:#777; 
+}
+.date {
+    text-align: right
+}
+.wrap p a {
+    text-decoration: none;
+    color: black;
+    padding: 5px 10px;
+    border: 1px solid rgb(105, 105, 105);
+    border-radius: 5px;
+}
