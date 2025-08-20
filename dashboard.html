@@ -7,10 +7,14 @@
   <link rel="stylesheet" type="text/css" href="./assets/styles/dashboard.css"/>
   <link rel="icon" href="./assets/img/logo.png">
   <link rel="stylesheet" type="text/css" href="./assets/styles/spinner.css"/>
+  <meta name="robots" content="noindex, nofollow">
 </head>
 <body>
-  <h1>Адмін панель</h1>
-  <button id="logoutBtn">Вийти</button>
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>Адмін панель</h1>
+    <button id="logoutBtn">Вийти</button>
+  </div>
+
 
   <div class="row">
     <div class="card">
@@ -35,7 +39,10 @@
       <textarea id="body" placeholder="Текст" rows="6" required></textarea>
 
       <label>Фото (необ`язкове): <input type="file" id="cover" accept="image/*"></label>
-      <label><input type="checkbox" id="clearCover">Видалити поточну обложку</label>
+      <label class="checkbox" for="clearCover">
+        <input type="checkbox" id="clearCover" name="clearCover">
+        Видалити поточну обложку
+      </label>
 
       <button>Зберегти</button>
       <button type="button" id="resetBtn">Очистити</button>
@@ -43,7 +50,7 @@
     </form>
   </div>
 
-  <div class="card">
+  <div class="card posts">
     <h2>Пости</h2>
       <div id="loader" class="loader" aria-live="polite">
         <div class="spinner" role="status" aria-label="Завантаження"></div>

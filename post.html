@@ -8,9 +8,16 @@
   <link rel="stylesheet" type="text/css" href="./assets/styles/post.css"/>
   <link rel="stylesheet" type="text/css" href="./assets/styles/spinner.css"/>
   <link rel="icon" href="./assets/img/logo.png">
-  <style>
+  <title id="meta-title">Пост — Парафія Всіх Святих</title>
+  <meta id="meta-desc" name="description" content="Пост парафії.">
+  <link id="meta-canon" rel="canonical" href="https://ukrainian-orthodox-regensburg.netlify.app/post.html">
 
-  </style>
+  <meta property="og:type" content="article">
+  <meta id="og-title" property="og:title" content="Пост — Парафія Всіх Святих">
+  <meta id="og-desc" property="og:description" content="Пост парафії.">
+  <meta id="og-url" property="og:url" content="https://ukrainian-orthodox-regensburg.netlify.app/post.html">
+  <meta id="og-image" property="og:image" content="https://ukrainian-orthodox-regensburg.netlify.app/assets/img/main-img.jpg">
+
 </head>
 <body>
   <div class="wrap">
@@ -22,9 +29,11 @@
     </div>
 
     <img id="cover" class="cover" alt="" style="display:none">
-    <h1 id="title">Пост</h1>
-    <p class="date"><small id="date" class="muted"></small></p>
-    <div id="body"></div>
+    <div>
+      <h1 id="title">Пост</h1>
+      <p class="date"><small id="date" class="muted"></small></p>
+      <div class="description" id="body"></div>
+    </div>
   </div>
 
   <script type="module">
@@ -69,6 +78,44 @@
 
         document.getElementById('body').innerHTML = esc(p.body).replace(/\n/g,'<br>');
       }
+    }
+
+
+    function updatePostMeta(p){
+      const title = `${p.title} — Парафія Всіх Святих`;
+      const desc  = (p.body || '').trim().slice(0, 160).replace(/\s+/g,' ');
+      const url   = `https://ukrainian-orthodox-regensburg.netlify.app/post?id=${encodeURIComponent(p.id)}`;
+      const img   = p.cover_url || 'https://ukrainian-orthodox-regensburg.netlify.app/assets/img/main-img.jpg';
+
+      document.title = title;
+      document.getElementById('meta-title').textContent = title;
+      document.getElementById('meta-desc').setAttribute('content', desc);
+      document.getElementById('meta-canon').setAttribute('href', url);
+      document.getElementById('og-title').setAttribute('content', title);
+      document.getElementById('og-desc').setAttribute('content', desc);
+      document.getElementById('og-url').setAttribute('content', url);
+      document.getElementById('og-image').setAttribute('content', img);
+
+      // JSON-LD BlogPosting
+      const ld = {
+        "@context":"https://schema.org",
+        "@type":"BlogPosting",
+        "headline": p.title,
+        "image": img,
+        "datePublished": p.published_at,
+        "dateModified": p.updated_at || p.published_at,
+        "author": {"@type":"Organization","name":"Парафія Всіх Святих"},
+        "publisher":{"@type":"Organization","name":"Парафія Всіх Святих"},
+        "mainEntityOfPage": url
+      };
+      let script = document.getElementById('ld-post');
+      if (!script){
+        script = document.createElement('script');
+        script.type = 'application/ld+json';
+        script.id = 'ld-post';
+        document.head.appendChild(script);
+      }
+      script.textContent = JSON.stringify(ld);
     }
   </script>
 </body>

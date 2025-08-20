@@ -7,12 +7,63 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> 
     <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    
+    <meta name="google-site-verification" content="tVfR1qJp8CJFsN92KYEJr0-ASTw0-v8G1wwsh20kyRk" />
 
     <link rel="stylesheet" type="text/css" href="./assets/styles/index.css"/>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" type="text/css" href="./assets/styles/style.css"/>
-<link rel="stylesheet" type="text/css" href="./assets/styles/spinner.css"/>
+    <link rel="stylesheet" type="text/css" href="./assets/styles/spinner.css"/>
     <title>Парафія Всіх Святих</title>
+
+    <meta name="description" content="Українська православна парафія «Всіх Святих» у Регенсбурзі. Адреса: Kirche St. Leonhard, St. Leonhardgasse 1. Богослужіння щонеділі о 09:00. Ласкаво просимо!">
+    <link rel="canonical" href="https://ukrainian-orthodox-regensburg.netlify.app/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Парафія Всіх Святих — УПЦ, Регенсбург">
+    <meta property="og:description" content="Адреса: St. Leonhardgasse 1. Богослужіння щонеділі о 09:00.">
+    <meta property="og:url" content="https://ukrainian-orthodox-regensburg.netlify.app/">
+    <meta property="og:image" content="https://ukrainian-orthodox-regensburg.netlify.app/assets/img/main-img.jpg">
+    <meta property="og:locale" content="uk_UA">
+
+    <script type="application/ld+json">
+        {
+        "@context": "https://schema.org",
+        "@type": "Church",
+        "name": "Парафія Всіх Святих",
+        "alternateName": "Українська Православна Церква Регенсбург",
+        "url": "https://ukrainian-orthodox-regensburg.netlify.app/",
+        "image": "https://ukrainian-orthodox-regensburg.netlify.app/assets/img/main-img.jpg",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "St. Leonhardgasse 1",
+            "addressLocality": "Regensburg",
+            "postalCode": "93047",
+            "addressCountry": "DE"
+        },
+        "openingHoursSpecification": [{
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": "Sunday",
+            "opens": "09:00",
+            "closes": "11:00"
+        }],
+        "sameAs": [
+            "https://t.me/ukrainskapravoslavnazerkva",
+            "https://t.me/blagovist_uoc"
+        ]
+        }
+    </script>
+    <script type="application/ld+json">
+        {
+        "@context":"https://schema.org",
+        "@type":"BreadcrumbList",
+        "itemListElement":[
+            {"@type":"ListItem","position":1,"name":"Головна","item":"https://ukrainian-orthodox-regensburg.netlify.app/"},
+            {"@type":"ListItem","position":2,"name":"Пости","item":"https://ukrainian-orthodox-regensburg.netlify.app/posts.html"},
+            {"@type":"ListItem","position":3,"name":"Галерея","item":"https://ukrainian-orthodox-regensburg.netlify.app/gallery.html"}
+        ]
+        }
+    </script>
 
     <style>
         [data-ortox-id] {
@@ -121,7 +172,7 @@
     <!-- Footer -->
     <div class="footer">
         <footer>
-            <img src="./assets/img/logo.png" />
+            <img alt="Логотип парафії Всіх Святих" src="./assets/img/logo.png" />
             <p>Бог благословить!</p>
         </footer>
     </div>
@@ -170,7 +221,7 @@
 
             postsEl.innerHTML = posts.map(p => `
             <div class="post">
-                ${p.cover_url ? `<img class="cover" src="${p.cover_url}" alt="">` : ''}
+                ${p.cover_url ? `<img alt="Православна церква Регенсбург" class="cover" src="${p.cover_url}" alt="">` : ''}
                 <h3>${esc(p.title)}</h3>
                 <p>${esc(preview(p.body, 100))}</p>
                 <div>
@@ -197,7 +248,7 @@
             if (!files?.length){ galleryEl.innerHTML = `<p class="muted">Фотографій поки немає.</p>`; return; }
 
             const publicUrl = name => supabase.storage.from(BUCKET).getPublicUrl('photos/' + name).data.publicUrl;
-            galleryEl.innerHTML = files.map(f => `<img class="thumb" src="${publicUrl(f.name)}" alt="">`).join('');
+            galleryEl.innerHTML = files.map(f => `<img alt="Православна церква Регенсбург" class="thumb" src="${publicUrl(f.name)}" alt="">`).join('');
         }
 
         loadPosts();

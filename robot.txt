@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /login
+Disallow: /dashboard
+# (login/админке лучше ещё поставить noindex мета-тег на самих страницах)
+
+Sitemap: https://ukrainian-orthodox-regensburg.netlify.app/sitemap.xml
