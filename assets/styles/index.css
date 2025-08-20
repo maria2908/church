@@ -33,7 +33,7 @@ h1 {
   color: white;
   height: 70vh;
   background-size: cover;
-  background-position: center;
+  background-position: top center; 
   display: flex;
   flex-direction: column;
   border-radius: 0 0 2em 2em;
@@ -255,24 +255,14 @@ h1 {
   background: #f8fafc;
 }
 
-.footer {
-  background-color: white;
-}
-.footer footer {
+ footer {
   background-color: var(--blue-primary);
   color: white;
-  margin: 0 auto;
   text-align: center;
   padding: 30px;
   border-radius: 4em 4em 0 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
-.footer footer img {
-  width: 40px;
-  margin-right: 10px;
-}
+
 
 @media screen and (max-width: 1000px) {
   .quote .otro-blockquote {
